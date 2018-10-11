@@ -1,78 +1,85 @@
 <template>
+  <div
+    v-click-outside:mousedown.capture="handleClose"
+    v-click-outside.capture="handleClose"
+    :class="wrapperClasses"
+  >
     <div
-        :class="wrapperClasses"
-        v-click-outside:mousedown.capture="handleClose"
-        v-click-outside.capture="handleClose"
-    >
-        <div ref="reference" :class="[prefixCls + '-rel']">
-            <slot>
-                <i-input
-                    :key="forceInputRerender"
-                    :element-id="elementId"
-                    :class="[prefixCls + '-editor']"
-                    :readonly="!editable || readonly"
-                    :disabled="disabled"
-                    :size="size"
-                    :placeholder="placeholder"
-                    :value="visualValue"
-                    :name="name"
-                    ref="input"
+      ref="reference"
+      :class="[prefixCls + '-rel']">
+      <slot>
+        <i-input
+          ref="input"
 
-                    @on-input-change="handleInputChange"
-                    @on-focus="handleFocus"
-                    @on-blur="handleBlur"
-                    @on-click="handleIconClick"
-                    @click.native="handleFocus"
-                    @keydown.native="handleKeydown"
-                    @mouseenter.native="handleInputMouseenter"
-                    @mouseleave.native="handleInputMouseleave"
+          :key="forceInputRerender"
+          :element-id="elementId"
+          :class="[prefixCls + '-editor']"
+          :readonly="!editable || readonly"
+          :disabled="disabled"
+          :size="size"
+          :placeholder="placeholder"
+          :value="visualValue"
+          :name="name"
+          :icon="iconType"
 
-                    :icon="iconType"
-                ></i-input>
-            </slot>
-        </div>
-        <transition name="transition-drop">
-            <Drop
-                @click.native="handleTransferClick"
-                v-show="opened"
-                :class="{ [prefixCls + '-transfer']: transfer }"
-                :placement="placement"
-                ref="drop"
-                :data-transfer="transfer"
-                :transfer="transfer"
-                v-transfer-dom>
-                <div>
-                    <component
-                        :is="panel"
-                        ref="pickerPanel"
-                        :visible="visible"
-                        :showTime="type === 'datetime' || type === 'datetimerange'"
-                        :confirm="isConfirm"
-                        :selectionMode="selectionMode"
-                        :steps="steps"
-                        :format="format"
-                        :value="internalValue"
-                        :start-date="startDate"
-                        :split-panels="splitPanels"
-                        :show-week-numbers="showWeekNumbers"
-                        :picker-type="type"
-                        :multiple="multiple"
-                        :focused-date="focusedDate"
+          @on-input-change="handleInputChange"
+          @on-focus="handleFocus"
+          @on-blur="handleBlur"
+          @on-click="handleIconClick"
+          @click.native="handleFocus"
+          @keydown.native="handleKeydown"
+          @mouseenter.native="handleInputMouseenter"
+          @mouseleave.native="handleInputMouseleave"
 
-                        :time-picker-options="timePickerOptions"
-
-                        v-bind="ownPickerProps"
-
-                        @on-pick="onPick"
-                        @on-pick-clear="handleClear"
-                        @on-pick-success="onPickSuccess"
-                        @on-pick-click="disableClickOutSide = true"
-                        @on-selection-mode-change="onSelectionModeChange"
-                    ></component>
-                </div>
-            </Drop>
-        </transition>
+        />
+      </slot>
     </div>
+    <transition name="transition-drop">
+      <!-- ******* パラメータ追加  ********** -->
+      <Drop
+        v-transfer-dom
+        v-show="opened"
+        ref="drop"
+        :class="{ [prefixCls + '-transfer']: transfer }"
+        :placement="placement"
+        :flip-disable="flipDisable"
+        :data-transfer="transfer"
+        @click.native="handleTransferClick"
+      >
+        <!-- ******* パラメータ追加 end********** -->
+
+        <div>
+          <component
+            ref="pickerPanel"
+            :is="panel"
+            :visible="visible"
+            :show-time="type === 'datetime' || type === 'datetimerange'"
+            :confirm="isConfirm"
+            :selection-mode="selectionMode"
+            :steps="steps"
+            :format="format"
+            :value="internalValue"
+            :start-date="startDate"
+            :split-panels="splitPanels"
+            :show-week-numbers="showWeekNumbers"
+            :picker-type="type"
+            :multiple="multiple"
+            :focused-date="focusedDate"
+
+            :time-picker-options="timePickerOptions"
+
+            v-bind="ownPickerProps"
+
+            @on-pick="onPick"
+            @on-pick-clear="handleClear"
+            @on-pick-success="onPickSuccess"
+            @on-pick-click="disableClickOutSide = true"
+            @on-selection-mode-change="onSelectionModeChange"
+          />
+        </div>
+      </Drop>
+    </transition>
+  </div>
 </template>
 <script>
 
@@ -119,11 +126,11 @@
 
 
     export default {
-        mixins: [ Emitter ],
         components: { iInput, Drop },
         directives: { clickOutside, TransferDom },
+        mixins: [ Emitter ],
         props: {
-            format: {
+            format: {  // eslint-disable-line
                 type: String
             },
             readonly: {
@@ -166,10 +173,10 @@
                 type: Boolean,
                 default: false
             },
-            startDate: {
+            startDate: { // eslint-disable-line
                 type: Date
             },
-            size: {
+            size: {  // eslint-disable-line
                 validator (value) {
                     return oneOf(value, ['small', 'large', 'default']);
                 },
@@ -181,7 +188,7 @@
                 type: String,
                 default: ''
             },
-            placement: {
+            placement: { // eslint-disable-line
                 validator (value) {
                     return oneOf(value, ['top', 'top-start', 'top-end', 'bottom', 'bottom-start', 'bottom-end', 'left', 'left-start', 'left-end', 'right', 'right-start', 'right-end']);
                 },
@@ -193,23 +200,29 @@
                     return !this.$IVIEW || this.$IVIEW.transfer === '' ? false : this.$IVIEW.transfer;
                 }
             },
-            name: {
+            name: { // eslint-disable-line
                 type: String
             },
-            elementId: {
+            elementId: { // eslint-disable-line
                 type: String
             },
             steps: {
                 type: Array,
                 default: () => []
             },
-            value: {
+            value: { // eslint-disable-line
                 type: [Date, String, Array]
             },
             options: {
                 type: Object,
                 default: () => ({})
+            },
+            // ******************** 追加 *********************
+            flipDisable: {
+              type: Boolean,
+              default: false
             }
+            // ******************** 追加 *********************
         },
         data(){
             const isRange = this.type.includes('range');
@@ -279,6 +292,41 @@
             isConfirm(){
                 return this.confirm || this.type === 'datetime' || this.type === 'datetimerange' || this.multiple;
             }
+        },
+        watch: {
+          visible (state) {
+            if (state === false){
+              this.$refs.drop.destroy();
+            }
+            this.$refs.drop.update();
+            this.$emit('on-open-change', state);
+          },
+          value(val) {
+            this.internalValue = this.parseDate(val);
+          },
+          open (val) {
+            this.visible = val === true;
+          },
+          type(type){
+            this.onSelectionModeChange(type);
+          },
+          publicVModelValue(now, before){
+            const newValue = JSON.stringify(now);
+            const oldValue = JSON.stringify(before);
+            const shouldEmitInput = newValue !== oldValue || typeof now !== typeof before;
+            if (shouldEmitInput) this.$emit('input', now); // to update v-model
+          },
+        },
+        mounted () {
+          const initialValue = this.value;
+          const parsedValue = this.publicVModelValue;
+          if (typeof initialValue !== typeof parsedValue || JSON.stringify(initialValue) !== JSON.stringify(parsedValue)){
+            this.$emit('input', this.publicVModelValue); // to update v-model
+          }
+          if (this.open !== null) this.visible = this.open;
+
+          // to handle focus from confirm buttons
+          this.$on('focus-input', () => this.focus());
         },
         methods: {
             onSelectionModeChange(type){
@@ -569,9 +617,8 @@
             handleInputMouseleave () {
                 this.showClose = false;
             },
-            handleIconClick (e) {
+            handleIconClick () {
                 if (this.showClose) {
-                    if (e) e.stopPropagation();
                     this.handleClear();
                 } else if (!this.disabled) {
                     this.handleFocus();
@@ -681,40 +728,5 @@
                 this.$refs.input && this.$refs.input.focus();
             }
         },
-        watch: {
-            visible (state) {
-                if (state === false){
-                    this.$refs.drop.destroy();
-                }
-                this.$refs.drop.update();
-                this.$emit('on-open-change', state);
-            },
-            value(val) {
-                this.internalValue = this.parseDate(val);
-            },
-            open (val) {
-                this.visible = val === true;
-            },
-            type(type){
-                this.onSelectionModeChange(type);
-            },
-            publicVModelValue(now, before){
-                const newValue = JSON.stringify(now);
-                const oldValue = JSON.stringify(before);
-                const shouldEmitInput = newValue !== oldValue || typeof now !== typeof before;
-                if (shouldEmitInput) this.$emit('input', now); // to update v-model
-            },
-        },
-        mounted () {
-            const initialValue = this.value;
-            const parsedValue = this.publicVModelValue;
-            if (typeof initialValue !== typeof parsedValue || JSON.stringify(initialValue) !== JSON.stringify(parsedValue)){
-                this.$emit('input', this.publicVModelValue); // to update v-model
-            }
-            if (this.open !== null) this.visible = this.open;
-
-            // to handle focus from confirm buttons
-            this.$on('focus-input', () => this.focus());
-        }
     };
 </script>

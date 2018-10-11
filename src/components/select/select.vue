@@ -1,75 +1,85 @@
+<!-- flipDisable を追加-->
+
 <template>
+  <div
+    v-click-outside.capture="onClickOutside"
+    v-click-outside:mousedown.capture="onClickOutside"
+    :class="classes"
+  >
     <div
-        :class="classes"
-        v-click-outside.capture="onClickOutside"
-        v-click-outside:mousedown.capture="onClickOutside"
+      ref="reference"
+
+      :class="selectionCls"
+      :tabindex="selectTabindex"
+
+      @blur="toggleHeaderFocus"
+      @focus="toggleHeaderFocus"
+
+      @click="toggleMenu"
+      @keydown.esc="handleKeydown"
+      @keydown.enter="handleKeydown"
+      @keydown.up.prevent="handleKeydown"
+      @keydown.down.prevent="handleKeydown"
+      @keydown.tab="handleKeydown"
+      @keydown.delete="handleKeydown"
+
+
+      @mouseenter="hasMouseHoverHead = true"
+      @mouseleave="hasMouseHoverHead = false"
     >
-        <div
-            ref="reference"
+      <slot name="input">
+        <input
+          :name="name"
+          :value="publicValue"
+          type="hidden">
+        <select-head
+          :filterable="filterable"
+          :multiple="multiple"
+          :values="values"
+          :clearable="canBeCleared"
+          :disabled="disabled"
+          :remote="remote"
+          :input-element-id="elementId"
+          :initial-label="initialLabel"
+          :placeholder="placeholder"
+          :query-prop="query"
 
-            :class="selectionCls"
-            :tabindex="selectTabindex"
-
-            @blur="toggleHeaderFocus"
-            @focus="toggleHeaderFocus"
-
-            @click="toggleMenu"
-            @keydown.esc="handleKeydown"
-            @keydown.enter="handleKeydown"
-            @keydown.up.prevent="handleKeydown"
-            @keydown.down.prevent="handleKeydown"
-            @keydown.tab="handleKeydown"
-            @keydown.delete="handleKeydown"
-
-
-            @mouseenter="hasMouseHoverHead = true"
-            @mouseleave="hasMouseHoverHead = false"
-
-        >
-            <slot name="input">
-                <input type="hidden" :name="name" :value="publicValue">
-                <select-head
-                    :filterable="filterable"
-                    :multiple="multiple"
-                    :values="values"
-                    :clearable="canBeCleared"
-                    :disabled="disabled"
-                    :remote="remote"
-                    :input-element-id="elementId"
-                    :initial-label="initialLabel"
-                    :placeholder="placeholder"
-                    :query-prop="query"
-
-                    @on-query-change="onQueryChange"
-                    @on-input-focus="isFocused = true"
-                    @on-input-blur="isFocused = false"
-                    @on-clear="clearSingleSelect"
-                />
-            </slot>
-        </div>
-        <transition name="transition-drop">
-            <Drop
-                :class="dropdownCls"
-                v-show="dropVisible"
-                :placement="placement"
-                ref="dropdown"
-                :data-transfer="transfer"
-                :transfer="transfer"
-                v-transfer-dom
-            >
-                <ul v-show="showNotFoundLabel" :class="[prefixCls + '-not-found']"><li>{{ localeNotFoundText }}</li></ul>
-                <ul :class="prefixCls + '-dropdown-list'">
-                    <functional-options
-                        v-if="(!remote) || (remote && !loading)"
-                        :options="selectOptions"
-                        :slot-update-hook="updateSlotOptions"
-                        :slot-options="slotOptions"
-                    ></functional-options>
-                </ul>
-                <ul v-show="loading" :class="[prefixCls + '-loading']">{{ localeLoadingText }}</ul>
-            </Drop>
-        </transition>
+          @on-query-change="onQueryChange"
+          @on-input-focus="isFocused = true"
+          @on-input-blur="isFocused = false"
+          @on-clear="clearSingleSelect"
+        />
+      </slot>
     </div>
+    <!-- ******************** 追加 positionFixed*********************-->
+    <transition name="transition-drop">
+      <Drop
+        v-transfer-dom
+        v-show="dropVisible"
+        ref="dropdown"
+        :class="dropdownCls"
+        :placement="placement"
+        :flip-disable="flipDisable"
+        :data-transfer="transfer"
+      >
+        <!-- ******************** 追加 positionFixed end*********************-->
+        <ul
+          v-show="showNotFoundLabel"
+          :class="[prefixCls + '-not-found']"><li>{{ localeNotFoundText }}</li></ul>
+        <ul :class="prefixCls + '-dropdown-list'">
+          <functional-options
+            v-if="(!remote) || (remote && !loading)"
+            :options="selectOptions"
+            :slot-update-hook="updateSlotOptions"
+            :slot-options="slotOptions"
+          />
+        </ul>
+        <ul
+          v-show="loading"
+          :class="[prefixCls + '-loading']">{{ localeLoadingText }}</ul>
+      </Drop>
+    </transition>
+  </div>
 </template>
 <script>
     import Drop from './dropdown.vue';
@@ -81,8 +91,14 @@
     import SelectHead from './select-head.vue';
     import FunctionalOptions from './functional-options.vue';
 
+    // 日本語対応
+    import localeJa from 'iview/dist/locale/ja-JP' // Change locale, check node_modules/iview/dist/locale
+    import locale from 'iview/src/locale/index';
+    locale.use(localeJa);
+
+
     const prefixCls = 'ivu-select';
-    const optionRegexp = /^i-option$|^Option$/i;
+    const optionRegexp = /^i-option$|^Option$|^iOption$/i;
     const optionGroupRegexp = /option-?group/i;
 
     const findChild = (instance, checkFn) => {
@@ -135,116 +151,101 @@
         return textContent || (typeof innerHTML === 'string' ? innerHTML : '');
     };
 
-    const checkValuesNotEqual = (value,publicValue,values) => {
-        const strValue = JSON.stringify(value);
-        const strPublic = JSON.stringify(publicValue);
-        const strValues = JSON.stringify(values.map( item => {
-            return item.value;
-        }));
-        return strValue !== strPublic || strValue !== strValues || strValues !== strPublic;
-    };
-
 
     const ANIMATION_TIMEOUT = 300;
 
+
     export default {
-        name: 'iSelect',
-        mixins: [ Emitter, Locale ],
+        name: 'iSelect',  // eslint-disable-line
         components: { FunctionalOptions, Drop, SelectHead },
         directives: { clickOutside, TransferDom },
+        mixins: [ Emitter, Locale ],
         props: {
-            value: {
-                type: [String, Number, Array],
-                default: ''
+          value: {
+            type: [String, Number, Array],
+            default: ''
+          },
+          // 使用时，也得设置 value 才行
+          label: {
+            type: [String, Number, Array],
+            default: ''
+          },
+          multiple: {
+            type: Boolean,
+            default: false
+          },
+          disabled: {
+            type: Boolean,
+            default: false
+          },
+          clearable: {
+            type: Boolean,
+            default: false
+          },
+          placeholder: {  // eslint-disable-line
+            type: String
+          },
+          filterable: {
+            type: Boolean,
+            default: false
+          },
+          filterMethod: {  // eslint-disable-line
+            type: Function
+          },
+          remoteMethod: {  // eslint-disable-line
+            type: Function
+          },
+          loading: {
+            type: Boolean,
+            default: false
+          },
+          loadingText: {  // eslint-disable-line
+            type: String
+          },
+          size: {  // eslint-disable-line
+            validator (value) {
+              return oneOf(value, ['small', 'large', 'default']);
             },
-            // 使用时，也得设置 value 才行
-            label: {
-                type: [String, Number, Array],
-                default: ''
-            },
-            multiple: {
-                type: Boolean,
-                default: false
-            },
-            disabled: {
-                type: Boolean,
-                default: false
-            },
-            clearable: {
-                type: Boolean,
-                default: false
-            },
-            placeholder: {
-                type: String
-            },
-            filterable: {
-                type: Boolean,
-                default: false
-            },
-            filterMethod: {
-                type: Function
-            },
-            remoteMethod: {
-                type: Function
-            },
-            loading: {
-                type: Boolean,
-                default: false
-            },
-            loadingText: {
-                type: String
-            },
-            size: {
-                validator (value) {
-                    return oneOf(value, ['small', 'large', 'default']);
-                },
-                default () {
-                    return !this.$IVIEW || this.$IVIEW.size === '' ? 'default' : this.$IVIEW.size;
-                }
-            },
-            labelInValue: {
-                type: Boolean,
-                default: false
-            },
-            notFoundText: {
-                type: String
-            },
-            placement: {
-                validator (value) {
-                    return oneOf(value, ['top', 'bottom', 'top-start', 'bottom-start', 'top-end', 'bottom-end']);
-                },
-                default: 'bottom-start'
-            },
-            transfer: {
-                type: Boolean,
-                default () {
-                    return !this.$IVIEW || this.$IVIEW.transfer === '' ? false : this.$IVIEW.transfer;
-                }
-            },
-            // Use for AutoComplete
-            autoComplete: {
-                type: Boolean,
-                default: false
-            },
-            name: {
-                type: String
-            },
-            elementId: {
-                type: String
+            default () {
+              return !this.$IVIEW || this.$IVIEW.size === '' ? 'default' : this.$IVIEW.size;
             }
-        },
-        mounted(){
-            this.$on('on-select-selected', this.onOptionClick);
-
-            // set the initial values if there are any
-            if (!this.remote && this.selectOptions.length > 0){
-                this.values = this.getInitialValue().map(value => {
-                    if (typeof value !== 'number' && !value) return null;
-                    return this.getOptionData(value);
-                }).filter(Boolean);
+          },
+          labelInValue: {
+            type: Boolean,
+            default: false
+          },
+          notFoundText: {  // eslint-disable-line
+            type: String
+          },
+          placement: {  // eslint-disable-line
+            validator (value) {
+              return oneOf(value, ['top', 'bottom', 'top-start', 'bottom-start', 'top-end', 'bottom-end']);
+            },
+            default: 'bottom-start'
+          },
+          transfer: {
+            type: Boolean,
+            default () {
+              return !this.$IVIEW || this.$IVIEW.transfer === '' ? false : this.$IVIEW.transfer;
             }
-
-            this.checkUpdateStatus();
+          },
+          // Use for AutoComplete
+          autoComplete: {
+            type: Boolean,
+            default: false
+          },
+          name: {  // eslint-disable-line
+            type: String
+          },
+          elementId: {  // eslint-disable-line
+            type: String
+          },
+          // ******************** 追加 *********************
+          flipDisable: {
+            type: Boolean,
+            default: false
+          }
+          // ******************** 追加 end*********************
         },
         data () {
 
@@ -264,7 +265,6 @@
                 unchangedQuery: true,
                 hasExpectedValue: false,
                 preventRemoteCall: false,
-                filterQueryChange: false,  // #4273
             };
         },
         computed: {
@@ -293,6 +293,12 @@
                     [`${prefixCls}-selection`]: !this.autoComplete,
                     [`${prefixCls}-selection-focused`]: this.isFocused
                 };
+            },
+            queryStringMatchesSelectedOption(){
+                const selectedOptions = this.values[0];
+                if (!selectedOptions) return false;
+                const [query, label] = [this.query, selectedOptions.label].map(str => (str || '').trim());
+                return !this.multiple && this.unchangedQuery && query === label;
             },
             localeNotFoundText () {
                 if (typeof this.notFoundText === 'undefined') {
@@ -360,6 +366,7 @@
                         });
                     });
                 }
+                let hasDefaultSelected = slotOptions.some(option => this.query === option.key);
                 for (let option of slotOptions) {
 
                     const cOptions = option.componentOptions;
@@ -374,17 +381,16 @@
                             );
                         }
 
-                        // fix #4371
-                        children = children.map(opt => {
+                        cOptions.children = children.map(opt => {
                             optionCounter = optionCounter + 1;
                             return this.processOption(opt, selectedValues, optionCounter === currentIndex);
                         });
 
-                        // keep the group if it still has children  // fix #4371
-                        if (children.length > 0) selectOptions.push({...option,componentOptions:{...cOptions,children:children}});
+                        // keep the group if it still has children
+                        if (cOptions.children.length > 0) selectOptions.push({...option});
                     } else {
                         // ignore option if not passing filter
-                        if (this.filterQueryChange) {
+                        if (!hasDefaultSelected) {
                             const optionPassesFilter = this.filterable ? this.validateOption(cOptions) : option;
                             if (!optionPassesFilter) continue;
                         }
@@ -405,6 +411,119 @@
             remote(){
                 return typeof this.remoteMethod === 'function';
             }
+        },
+        watch: {
+            value(value){
+                const {getInitialValue, getOptionData, publicValue} = this;
+
+                this.checkUpdateStatus();
+
+                if (value === '') this.values = [];
+                else if (JSON.stringify(value) !== JSON.stringify(publicValue)) {
+                    this.$nextTick(() => this.values = getInitialValue().map(getOptionData).filter(Boolean));
+                }
+            },
+            values(now, before){
+                const newValue = JSON.stringify(now);
+                const oldValue = JSON.stringify(before);
+                // v-model is always just the value, event with labelInValue === true
+                const vModelValue = (this.publicValue && this.labelInValue) ?
+                    (this.multiple ? this.publicValue.map(({value}) => value) : this.publicValue.value) :
+                    this.publicValue;
+                const shouldEmitInput = newValue !== oldValue && vModelValue !== this.value;
+                if (shouldEmitInput) {
+                    this.$emit('input', vModelValue); // to update v-model
+                    this.$emit('on-change', this.publicValue);
+                    this.dispatch('FormItem', 'on-form-change', this.publicValue);
+                }
+            },
+            query (query) {
+                this.$emit('on-query-change', query);
+                const {remoteMethod, lastRemoteQuery} = this;
+                const hasValidQuery = query !== '' && (query !== lastRemoteQuery || !lastRemoteQuery);
+                const shouldCallRemoteMethod = remoteMethod && hasValidQuery && !this.preventRemoteCall;
+                this.preventRemoteCall = false; // remove the flag
+
+                if (shouldCallRemoteMethod){
+                    this.focusIndex = -1;
+                    const promise = this.remoteMethod(query);
+                    this.initialLabel = '';
+                    if (promise && promise.then){
+                        promise.then(options => {
+                            if (options) this.options = options;
+                        });
+                    }
+                }
+                if (query !== '' && this.remote) this.lastRemoteQuery = query;
+            },
+            loading(state){
+                if (state === false){
+                    this.updateSlotOptions();
+                }
+            },
+            isFocused(focused){
+                const el = this.filterable ? this.$el.querySelector('input[type="text"]') : this.$el;
+                el[this.isFocused ? 'focus' : 'blur']();
+
+                // restore query value in filterable single selects
+                const [selectedOption] = this.values;
+                if (selectedOption && this.filterable && !this.multiple && !focused){
+                    const selectedLabel = String(selectedOption.label || selectedOption.value).trim();
+                    if (selectedLabel && this.query !== selectedLabel) {
+                        this.preventRemoteCall = true;
+                        this.query = selectedLabel;
+                    }
+                }
+            },
+            focusIndex(index){
+                if (index < 0 || this.autoComplete) return;
+                // update scroll
+                const optionValue = this.flatOptions[index].componentOptions.propsData.value;
+                const optionInstance = findChild(this, ({$options}) => {
+                    return $options.componentName === 'select-item' && $options.propsData.value === optionValue;
+                });
+
+                let bottomOverflowDistance = optionInstance.$el.getBoundingClientRect().bottom - this.$refs.dropdown.$el.getBoundingClientRect().bottom;
+                let topOverflowDistance = optionInstance.$el.getBoundingClientRect().top - this.$refs.dropdown.$el.getBoundingClientRect().top;
+                if (bottomOverflowDistance > 0) {
+                    this.$refs.dropdown.$el.scrollTop += bottomOverflowDistance;
+                }
+                if (topOverflowDistance < 0) {
+                    this.$refs.dropdown.$el.scrollTop += topOverflowDistance;
+                }
+            },
+            dropVisible(open){
+                this.broadcast('Drop', open ? 'on-update-popper' : 'on-destroy-popper');
+            },
+            selectOptions(){
+                if (this.hasExpectedValue && this.selectOptions.length > 0){
+                    if (this.values.length === 0) {
+                        this.values = this.getInitialValue();
+                    }
+                    this.values = this.values.map(this.getOptionData).filter(Boolean);
+                    this.hasExpectedValue = false;
+                }
+
+                if (this.slotOptions && this.slotOptions.length === 0){
+                    this.query = '';
+                }
+            },
+            visible(state){
+                this.$emit('on-open-change', state);
+            }
+        },
+        mounted(){
+            this.$on('on-select-selected', this.onOptionClick);
+
+            // set the initial values if there are any
+            if (!this.remote && this.selectOptions.length > 0){
+                this.values = this.getInitialValue().map(value => {
+                    if (typeof value !== 'number' && !value) return null;
+                    return this.getOptionData(value);
+                }).filter(Boolean);
+            }
+
+            this.checkUpdateStatus();
         },
         methods: {
             setQuery(query){ // PUBLIC API
@@ -466,6 +585,8 @@
             },
 
             validateOption({children, elm, propsData}){
+                if (this.queryStringMatchesSelectedOption) return true;
+
                 const value = propsData.value;
                 const label = propsData.label || '';
                 const textContent = (elm && elm.textContent) || (children || []).reduce((str, node) => {
@@ -530,7 +651,6 @@
                 this.focusIndex = -1;
                 this.unchangedQuery = true;
                 this.values = [];
-                this.filterQueryChange = false;
             },
             handleKeydown (e) {
                 if (e.key === 'Backspace'){
@@ -630,15 +750,11 @@
                     if (!this.autoComplete) this.$nextTick(() => inputField.focus());
                 }
                 this.broadcast('Drop', 'on-update-popper');
-                setTimeout(() => {
-                  this.filterQueryChange = false;
-                },300)
             },
             onQueryChange(query) {
                 if (query.length > 0 && query !== this.query) this.visible = true;
                 this.query = query;
                 this.unchangedQuery = this.visible;
-                this.filterQueryChange = true;
             },
             toggleHeaderFocus({type}){
                 if (this.disabled) {
@@ -653,106 +769,6 @@
                 if (this.getInitialValue().length > 0 && this.selectOptions.length === 0) {
                     this.hasExpectedValue = true;
                 }
-            },
-        },
-        watch: {
-            value(value){
-                const {getInitialValue, getOptionData, publicValue, values} = this;
-
-                this.checkUpdateStatus();
-
-                if (value === '') this.values = [];
-                else if (checkValuesNotEqual(value,publicValue,values)) {
-                    this.$nextTick(() => this.values = getInitialValue().map(getOptionData).filter(Boolean));
-                }
-            },
-            values(now, before){
-                const newValue = JSON.stringify(now);
-                const oldValue = JSON.stringify(before);
-                // v-model is always just the value, event with labelInValue === true
-                const vModelValue = (this.publicValue && this.labelInValue) ?
-                    (this.multiple ? this.publicValue.map(({value}) => value) : this.publicValue.value) :
-                    this.publicValue;
-                const shouldEmitInput = newValue !== oldValue && vModelValue !== this.value;
-                if (shouldEmitInput) {
-                    this.$emit('input', vModelValue); // to update v-model
-                    this.$emit('on-change', this.publicValue);
-                    this.dispatch('FormItem', 'on-form-change', this.publicValue);
-                }
-            },
-            query (query) {
-                this.$emit('on-query-change', query);
-                const {remoteMethod, lastRemoteQuery} = this;
-                const hasValidQuery = query !== '' && (query !== lastRemoteQuery || !lastRemoteQuery);
-                const shouldCallRemoteMethod = remoteMethod && hasValidQuery && !this.preventRemoteCall;
-                this.preventRemoteCall = false; // remove the flag
-
-                if (shouldCallRemoteMethod){
-                    this.focusIndex = -1;
-                    const promise = this.remoteMethod(query);
-                    this.initialLabel = '';
-                    if (promise && promise.then){
-                        promise.then(options => {
-                            if (options) this.options = options;
-                        });
-                    }
-                }
-                if (query !== '' && this.remote) this.lastRemoteQuery = query;
-            },
-            loading(state){
-                if (state === false){
-                    this.updateSlotOptions();
-                }
-            },
-            isFocused(focused){
-                const el = this.filterable ? this.$el.querySelector('input[type="text"]') : this.$el;
-                el[this.isFocused ? 'focus' : 'blur']();
-
-                // restore query value in filterable single selects
-                const [selectedOption] = this.values;
-                if (selectedOption && this.filterable && !this.multiple && !focused){
-                    const selectedLabel = String(selectedOption.label || selectedOption.value).trim();
-                    if (selectedLabel && this.query !== selectedLabel) {
-                        this.preventRemoteCall = true;
-                        this.query = selectedLabel;
-                    }
-                }
-            },
-            focusIndex(index){
-                if (index < 0 || this.autoComplete) return;
-                // update scroll
-                const optionValue = this.flatOptions[index].componentOptions.propsData.value;
-                const optionInstance = findChild(this, ({$options}) => {
-                    return $options.componentName === 'select-item' && $options.propsData.value === optionValue;
-                });
-
-                let bottomOverflowDistance = optionInstance.$el.getBoundingClientRect().bottom - this.$refs.dropdown.$el.getBoundingClientRect().bottom;
-                let topOverflowDistance = optionInstance.$el.getBoundingClientRect().top - this.$refs.dropdown.$el.getBoundingClientRect().top;
-                if (bottomOverflowDistance > 0) {
-                    this.$refs.dropdown.$el.scrollTop += bottomOverflowDistance;
-                }
-                if (topOverflowDistance < 0) {
-                    this.$refs.dropdown.$el.scrollTop += topOverflowDistance;
-                }
-            },
-            dropVisible(open){
-                this.broadcast('Drop', open ? 'on-update-popper' : 'on-destroy-popper');
-            },
-            selectOptions(){
-                if (this.hasExpectedValue && this.selectOptions.length > 0){
-                    if (this.values.length === 0) {
-                        this.values = this.getInitialValue();
-                    }
-                    this.values = this.values.map(this.getOptionData).filter(Boolean);
-                    this.hasExpectedValue = false;
-                }
-
-                if (this.slotOptions && this.slotOptions.length === 0){
-                    this.query = '';
-                }
-            },
-            visible(state){
-                this.$emit('on-open-change', state);
             }
         }
     };

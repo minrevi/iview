@@ -1,11 +1,10 @@
+<!-- touch.preventを削除してスマホでスクロールできるように-->
+
 <template>
-    <li
-        :class="classes"
-        @click.stop="select"
-        @touchend.stop="select"
-        @mousedown.prevent
-        @touchstart.prevent
-    ><slot>{{ showLabel }}</slot></li>
+  <li
+    :class="classes"
+    @click.stop="select"
+  ><slot>{{ showLabel }}</slot></li>
 </template>
 <script>
     import Emitter from '../../mixins/emitter';
@@ -14,7 +13,7 @@
     const prefixCls = 'ivu-select-item';
 
     export default {
-        name: 'iOption',
+        name: 'iOption',  // eslint-disable-line
         componentName: 'select-item',
         mixins: [ Emitter ],
         props: {
@@ -22,7 +21,7 @@
                 type: [String, Number],
                 required: true
             },
-            label: {
+            label: {  // eslint-disable-line
                 type: [String, Number]
             },
             disabled: {
@@ -62,6 +61,10 @@
                 return this.label || (this.$el && this.$el.textContent);
             }
         },
+        mounted () {
+          const Select = findComponentUpward(this, 'iSelect');
+          if (Select) this.autoComplete = Select.autoComplete;
+        },
         methods: {
             select () {
                 if (this.disabled) return false;
@@ -75,10 +78,6 @@
                     label: this.optionLabel,
                 });
             },
-        },
-        mounted () {
-            const Select = findComponentUpward(this, 'iSelect');
-            if (Select) this.autoComplete = Select.autoComplete;
         },
     };
 </script>
